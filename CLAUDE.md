@@ -2,35 +2,11 @@
 
 Guidance for Claude Code (claude.ai/code) and other AI assistants working in this repository.
 
-## Current state of this repository
-
-**This repository is empty.** At the time this file was written it contained no
-commits, no branches, and no source files — the GitHub API reports
-`409 Git Repository is empty` for `guido-van-dijk/Gran-Canaria`, and this file is
-the first content added to it.
-
-That means there is deliberately **no** description of application structure,
-build commands, test commands, architecture, or coding conventions below: none
-exist yet, and documenting invented ones would be actively misleading.
-
-### What to do about that
-
-When you are the first assistant to add real code here:
-
-1. Read the code that now exists before trusting anything in this file.
-2. Replace the placeholder sections below with what you actually observe —
-   real commands you have run successfully, real directory layout, real
-   conventions visible in the code.
-3. Delete this "Current state" section once the repository has content.
-
-Do not extend the placeholders with guesses. An empty section is more useful
-than a wrong one.
-
 ## Repository
 
 - **Remote:** https://github.com/guido-van-dijk/Gran-Canaria (public)
 - **Owner:** guido-van-dijk
-- **Default branch:** not yet created (the repo has no refs)
+- **Default branch:** `claude/claude-md-docs-oqhq7d` (er is nog geen `main`)
 
 ## Development workflow
 
@@ -62,25 +38,44 @@ freeform body.
 
 ## Project structure
 
-_Not yet applicable — the repository contains no source files._
+```
+README.md                 Gebruiksaanwijzing (Nederlands)
+.env.example              Sjabloon voor HA_URL / HA_TOKEN; .env is gitignored
+tools/ha_uitlezen.py      CLI die een Home Assistant instantie uitleest via de REST API
+```
 
-Once code lands, document here: the top-level directories, what lives in each,
-and where the entry point(s) are.
+`tools/ha_uitlezen.py` is het enige uitvoerbare bestand en het startpunt.
 
 ## Build, test, and run
 
-_Not yet applicable — there is no build system, package manifest, or test suite._
+Er is geen build-systeem, package manifest of testsuite — het script gebruikt
+alleen de Python-standaardbibliotheek (3.9+).
 
-Once tooling lands, document here the exact commands (install, build, test,
-lint, typecheck, dev server) and verify each one runs before recording it.
+```bash
+python3 tools/ha_uitlezen.py --help          # subopdrachten en vlaggen
+python3 tools/ha_uitlezen.py                 # overzicht (vereist HA_URL + HA_TOKEN)
+python3 -m py_compile tools/ha_uitlezen.py   # syntaxcontrole
+```
+
+Handmatig testen zonder echte instantie: draai een mock-HTTP-server die
+`/api/`, `/api/config`, `/api/states`, `/api/states/<id>` en `/api/services`
+teruggeeft, en wijs `--url` daarheen. Zet `NO_PROXY` voor het loopback-adres
+als er een HTTP-proxy in de omgeving staat.
 
 ## Conventions
 
-_Not yet applicable — no code exists to derive conventions from._
-
-Once code lands, document here: language and version, formatter/linter
-configuration, naming and file-layout patterns, error-handling style, and any
-rule that is not obvious from reading a single file.
+- **Taal:** Python 3, alleen standaardbibliotheek. Geen dependencies toevoegen
+  zonder aanleiding — de drempel om het script te draaien moet laag blijven.
+- **Naamgeving:** functies, variabelen en CLI-opdrachten zijn Nederlands; dat
+  geldt ook voor alle uitvoer en foutmeldingen. `snake_case`, geen afkortingen.
+- **Foutafhandeling:** netwerk- en HTTP-fouten worden omgezet naar `HAError` met
+  een melding die zegt wat de gebruiker moet doen (401 → nieuw token, connection
+  refused → draait HA en is de URL bereikbaar). `main` vangt `HAError`, print
+  naar stderr en geeft exit 1.
+- **Alleen lezen:** het script doet uitsluitend `GET`. Schakelen of services
+  aanroepen is bewust geen onderdeel; voeg dat niet toe zonder expliciete vraag.
+- **Geheimen:** tokens komen uit `.env`, omgevingsvariabelen of vlaggen en staan
+  nooit in de repository.
 
 ## Notes for AI assistants
 
