@@ -1,0 +1,14 @@
+interface:
+  display_name: Dream Loop
+  short_description: Build polished visuals through image-guided iteration
+  default_prompt: Use $dream-loop to build a visually polished game, app, or 3D scene
+    from my description.
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true
