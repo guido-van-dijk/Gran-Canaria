@@ -1,0 +1,15 @@
+{
+  "name": "school-tour",
+  "version": "1.0.0",
+  "description": "3D onboarding tour of the school entrance for new students (three.js)",
+  "scripts": {
+    "start": "python3 ../.claude/skills/dream-loop/scripts/preview-server.py --directory .. --port 4172"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "three": "^0.180.0"
+  },
+  "private": true
+}
