@@ -36,12 +36,13 @@ const css = `
 .tour-card .row{display:flex;gap:8px;margin-top:12px;align-items:center}
 .tour-card button{border:0;border-radius:999px;padding:8px 16px;font:600 14px system-ui;cursor:pointer;background:#e9e4da;color:#222}
 .tour-card button.primary{background:#2f6f4f;color:#fff}
+.tour-card button.walk{background:#f0a63a;color:#222;width:100%}
 .tour-card .step{margin-left:auto;font-size:13px;color:#666}
 .tour-dot{position:fixed;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;background:#2f6f4f;color:#fff;font:700 15px/34px system-ui;text-align:center;cursor:pointer;box-shadow:0 0 0 4px rgba(255,255,255,.7);transition:transform .15s}
 .tour-dot:hover,.tour-dot.active{transform:scale(1.18);background:#f0a63a;color:#222}
 `;
 
-export function startTour({ camera, view, renderer, onFrame }) {
+export function startTour({ camera, view, renderer, onFrame, onWalk }) {
   const style = document.createElement('style'); style.textContent = css; document.head.appendChild(style);
   const card = document.createElement('div'); card.className = 'tour-card'; document.body.appendChild(card);
 
@@ -55,7 +56,7 @@ export function startTour({ camera, view, renderer, onFrame }) {
   const photoProjection = camera.updateProjectionMatrix;
   const freeProjection = THREE.PerspectiveCamera.prototype.updateProjectionMatrix;
 
-  let current = 0, flight = null;
+  let current = 0, flight = null, active = true;
   const lookNow = new THREE.Vector3(...STOPS[0].look);
 
   function render() {
@@ -63,8 +64,9 @@ export function startTour({ camera, view, renderer, onFrame }) {
     card.innerHTML = `<h2>${s.title}</h2><div>${s.text}</div>
       <div class="row">${current ? '<button data-a="prev">Vorige</button>' : ''}
       <button class="primary" data-a="next">${last ? 'Opnieuw' : 'Volgende'}</button>
-      <span class="step">${current + 1} / ${STOPS.length}</span></div>`;
-    card.querySelectorAll('button').forEach(b => b.onclick = () => go(b.dataset.a === 'prev' ? current - 1 : (last ? 0 : current + 1)));
+      <span class="step">${current + 1} / ${STOPS.length}</span></div>
+      <div class="row"><button class="walk" data-a="walk">🚶 Zelf rondlopen en naar binnen</button></div>`;
+    card.querySelectorAll('button').forEach(b => b.onclick = () => b.dataset.a === 'walk' ? onWalk && onWalk() : go(b.dataset.a === 'prev' ? current - 1 : (last ? 0 : current + 1)));
     dots.forEach((d, i) => d && d.classList.toggle('active', i === current));
   }
 
@@ -83,6 +85,7 @@ export function startTour({ camera, view, renderer, onFrame }) {
 
   const v = new THREE.Vector3();
   onFrame((dt) => {
+    if (!active) return;
     if (flight) {
       flight.t = Math.min(1, flight.t + dt / 2.2);
       const e = flight.t < 0.5 ? 2 * flight.t * flight.t : 1 - Math.pow(-2 * flight.t + 2, 2) / 2;
@@ -102,4 +105,13 @@ export function startTour({ camera, view, renderer, onFrame }) {
     });
   });
   render();
+
+  return {
+    setActive(on) {
+      active = on;
+      card.style.display = on ? '' : 'none';
+      dots.forEach(d => d && (d.style.display = on ? '' : 'none'));
+      if (on) { camera.rotation.order = 'XYZ'; go(current); }
+    },
+  };
 }

@@ -346,6 +346,7 @@ const alu = std('#bfae86', 0.45, { metalness: 0.3 });
 for (let x = 1.95; x < 17; x += 1.38) box(0.1, TB, 0.1, alu, x, TB / 2, GZ + 0.04);
 for (const y of [0.35, 3.45, 4.2]) box(16, 0.1, 0.1, alu, 9.8, y, GZ + 0.04);
 // revolving door: glass drum, steel posts, curved header under the transom
+const world = { doorWings: new THREE.Group() };
 {
   const rd = new THREE.Group(); rd.position.set(6.91, 0, GZ + 0.95); scene.add(rd);
   const drum = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.3, 3.4, 64, 1, true, -Math.PI / 2, Math.PI),
@@ -357,9 +358,10 @@ for (const y of [0.35, 3.45, 4.2]) box(16, 0.1, 0.1, alu, 9.8, y, GZ + 0.04);
     const p = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 3.4, 8), std('#a9aaa8', 0.3, { metalness: 0.8 }));
     p.position.set(Math.sin(a) * 1.3, 1.7, Math.cos(a) * 1.3); rd.add(p);
   }
+  rd.add(world.doorWings);
   for (let i = 0; i < 3; i++) {
     const wing = new THREE.Mesh(new THREE.PlaneGeometry(1.25, 3.2), new THREE.MeshPhysicalMaterial({ color: '#cfd5d4', roughness: 0.05, transparent: true, opacity: 0.2, side: THREE.DoubleSide }));
-    wing.geometry.translate(0.625, 1.6, 0); wing.rotation.y = i * 2.094 + 0.5; rd.add(wing);
+    wing.geometry.translate(0.625, 1.6, 0); wing.rotation.y = i * 2.094 + 0.5; world.doorWings.add(wing);
   }
 }
 // info sign inside the entrance
@@ -476,4 +478,12 @@ renderer.setAnimationLoop(() => {
   window.__frames = (window.__frames || 0) + 1;
   if (CAPTURE && window.__frames >= 3) { renderer.setAnimationLoop(null); window.__png = renderer.domElement.toDataURL('image/png'); }
 });
-if (!CAPTURE) import('./tour.js').then(m => m.startTour({ camera, view, renderer, onFrame: f => frameHooks.push(f) }));
+if (!CAPTURE) {
+  Promise.all([import('./tour.js'), import('./walk.js')]).then(([tourMod, walkMod]) => {
+    const onFrame = f => frameHooks.push(f);
+    let tour = null;
+    const walk = walkMod.startWalk({ scene, camera, renderer, onFrame, world, onExit: () => { walk.setActive(false); tour.setActive(true); } });
+    tour = tourMod.startTour({ camera, view, renderer, onFrame, onWalk: () => { tour.setActive(false); walk.setActive(true); } });
+    if (params.has('walk')) { tour.setActive(false); walk.setActive(true); }
+  });
+}

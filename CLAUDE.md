@@ -12,7 +12,9 @@ Guidance for Claude Code (claude.ai/code) and other AI assistants working in thi
 - `school-tour/`: a 3D onboarding tour of a school entrance for new students, built with three.js.
   - `index.html` is the entry point. It loads three.js from `node_modules` through an import map, so there is no bundler.
   - `main.js` builds the scene: the coloured-panel wing, the cream tower with porthole domes, the entrance, golden-hour lighting, and a camera matched to the reference photo.
-  - `tour.js` adds the onboarding layer: numbered stops, camera flights and Dutch info cards. It is loaded only when the page is opened without `?capture`.
+  - `tour.js` adds the guided onboarding layer: numbered stops, camera flights and Dutch info cards. Its "Zelf rondlopen" button switches to walk mode.
+  - `walk.js` is the free-walk mode. You walk with WASD or the arrow keys and drag to look around, then go through the revolving door into the lobby and the classroom corridor. It has three people you can talk to (reception, a student buddy and a mentor), with Dutch dialogue trees and a first-day checklist. The walkable areas are rectangles in `WALK` and the obstacles are in `BLOCK`.
+  - `tour.js` and `walk.js` are loaded only when the page is opened without `?capture`, so capture renders stay identical to the photo-matched view.
 - `.claude/skills/dream-loop/`: the vendored Dream Loop skill (MIT, achimala/dream-loop), used to iterate the visuals against a target image.
 - `.dream-loop/` (gitignored): the skill's working files, including `target.png`, captures and the capture/compare scripts.
 
@@ -22,6 +24,7 @@ Guidance for Claude Code (claude.ai/code) and other AI assistants working in thi
 cd school-tour && npm install         # installs three.js
 npm start                             # serves the repo root at http://127.0.0.1:4172
 # open http://127.0.0.1:4172/school-tour/            -> interactive tour
+# open http://127.0.0.1:4172/school-tour/?walk       -> start directly in walk mode (window.__player holds position/yaw)
 # open http://127.0.0.1:4172/school-tour/?capture    -> fixed photo-matched view, renders 3 frames, exposes window.__png
 node --test .claude/skills/dream-loop/scripts/fal-batch.test.mjs   # skill helper tests
 ```
