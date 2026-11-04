@@ -304,7 +304,7 @@ for (let x = 2.3; x < 16; x += 2.2) for (const z of [-0.6, -1.6]) {
 // --- entrance: glass curtain wall at z = -15, lobby behind ---
 const GZ = -15.0;
 box(16, 0.1, 9, std('#6e685e', 0.7), 9.5, 4.15, GZ - 4.5);             // lobby ceiling
-box(16, 4.2, 0.1, std('#4a453c', 0.9), 9.5, 2.1, GZ - 9);              // back wall
+const lobbyBackWall = box(16, 4.2, 0.1, std('#4a453c', 0.9), 9.5, 2.1, GZ - 9); // back wall (replaced in walk mode)
 box(16, 0.05, 9, std('#4d4943', 0.4), 9.5, 0.02, GZ - 4.5);            // floor
 for (let x = 2.2; x < 16; x += 0.75) for (let z = -0.6; z > -8; z -= 1.1) {
   const l = new THREE.Mesh(new THREE.CircleGeometry(0.05, 10), lightMat);
@@ -346,7 +346,7 @@ const alu = std('#bfae86', 0.45, { metalness: 0.3 });
 for (let x = 1.95; x < 17; x += 1.38) box(0.1, TB, 0.1, alu, x, TB / 2, GZ + 0.04);
 for (const y of [0.35, 3.45, 4.2]) box(16, 0.1, 0.1, alu, 9.8, y, GZ + 0.04);
 // revolving door: glass drum, steel posts, curved header under the transom
-const world = { doorWings: new THREE.Group() };
+const world = { doorWings: new THREE.Group(), lobbyBackWall };
 {
   const rd = new THREE.Group(); rd.position.set(6.91, 0, GZ + 0.95); scene.add(rd);
   const drum = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.3, 3.4, 64, 1, true, -Math.PI / 2, Math.PI),
@@ -479,8 +479,9 @@ renderer.setAnimationLoop(() => {
   if (CAPTURE && window.__frames >= 3) { renderer.setAnimationLoop(null); window.__png = renderer.domElement.toDataURL('image/png'); }
 });
 if (!CAPTURE) {
-  Promise.all([import('./tour.js'), import('./walk.js')]).then(([tourMod, walkMod]) => {
+  Promise.all([import('./tour.js'), import('./walk.js'), import('./env.js')]).then(([tourMod, walkMod, envMod]) => {
     const onFrame = f => frameHooks.push(f);
+    envMod.buildEnvironment(scene);
     let tour = null;
     const walk = walkMod.startWalk({ scene, camera, renderer, onFrame, world, onExit: () => { walk.setActive(false); tour.setActive(true); } });
     tour = tourMod.startTour({ camera, view, renderer, onFrame, onWalk: () => { tour.setActive(false); walk.setActive(true); } });

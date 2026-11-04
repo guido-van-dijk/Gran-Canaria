@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { ENV_WALK, ENV_BLOCK } from './env.js';
+import { buildAgora, AGORA_WALK, AGORA_BLOCK, A } from './agora.js';
 
 // Free-walk mode: walk from the square through the revolving door into the
 // lobby and the classroom corridor, and talk to people about your first day.
@@ -11,6 +13,8 @@ const TASKS = {
   receptie: 'Meld je bij de receptie',
   buddy: 'Praat met je buddy',
   mentor: 'Maak kennis met je mentor',
+  coach: 'Ontmoet je coach op het gele balkon',
+  aula: 'Vind het leerplein en de kantine',
 };
 
 const PEOPLE = [
@@ -26,7 +30,7 @@ const PEOPLE = [
         ['Ik voel me niet lekker.', 'ziek'],
         ['Doei!', 'end'],
       ] },
-      melden: { task: 'receptie', text: 'Fijn dat je er bent! Op je eerste dag meld je je hier even, dan zet ik een vinkje achter je naam. Daarna haalt je mentor je klas op in de aula.', back: 'start' },
+      melden: { task: 'receptie', text: 'Fijn dat je er bent! Op je eerste dag meld je je hier even, dan zet ik een vinkje achter je naam. Daarna haalt je coach je groep op op het leerplein.', back: 'start' },
       laat: { text: 'Kom dan eerst hier langs voor een te-laatbriefje. Zonder briefje mag je de les niet in. Geen paniek: het overkomt iedereen weleens.', back: 'start' },
       kwijt: { text: 'Gevonden voorwerpen bewaren we in de bak achter de balie. Kom gerust kijken. Tip: zet je naam in je jas en op je spullen!', back: 'start' },
       ziek: { text: 'Vervelend! Meld je hier, dan bellen we samen naar huis. Ga nooit zomaar weg zonder je af te melden.', back: 'start' },
@@ -45,9 +49,43 @@ const PEOPLE = [
         ['Bedankt, doei!', 'end'],
       ] },
       lokaal: { task: 'buddy', text: 'Kijk naar het lokaalnummer: het eerste cijfer is de verdieping. 0.12 is dus beneden, 2.05 op de tweede. De gekleurde panelen buiten helpen ook: elke verdieping heeft zijn eigen kleuren.', back: 'start' },
-      eten: { task: 'buddy', text: 'In de pauze kun je in de aula zitten of buiten op het plein. In de kleine pauze blijf je wel op het schoolterrein.', back: 'start' },
+      eten: { task: 'buddy', text: 'In de pauze kun je op het leerplein zitten, bij de gele foodtruck, of buiten op het plein. In de kleine pauze blijf je wel op het schoolterrein.', back: 'start' },
       tips: { task: 'buddy', text: 'Pak je tas de avond ervoor in met je rooster ernaast. Zet je rooster op je telefoon. En durf het te vragen als je iets niet weet: iedereen is in het begin de weg kwijt!', back: 'start' },
       mentor: { text: 'De mentoren zitten in de gang links, via de opening naast de trap. Meneer Bakker staat daar meestal bij de kluisjes.', back: 'start' },
+    },
+  },
+  {
+    id: 'ahmed', name: 'Ahmed', role: 'kantine',
+    pos: [12.6, -42.0], face: -0.6,
+    look: { skin: '#b07850', hair: '#1a1a1a', hairStyle: 'short', shirt: '#a85a4a', pants: '#2b2f3a', height: 1.78 },
+    dialog: {
+      start: { text: 'Hoi! Welkom op het leerplein. Hier werk je aan je eigen leerdoelen en lunch je in de pauze. Ik sta bij de gele foodtruck: dat is onze kantine. Ik ben Ahmed.', choices: [
+        ['Wat kan ik hier kopen?', 'kopen'],
+        ['Waar mag ik zitten?', 'zitten'],
+        ['Mag ik mijn eigen lunch meenemen?', 'eigen'],
+        ['Doei!', 'end'],
+      ] },
+      kopen: { task: 'aula', text: 'Broodjes, soep, fruit en water. Betalen gaat met je pinpas of je telefoon.', back: 'start' },
+      zitten: { task: 'aula', text: 'Op het leerplein heb je je eigen werkplek. In de pauzes mag je overal zitten. In de kurken kubus met de ronde ramen kun je overleggen, en wil je even bewegen: probeer de klimwand!', back: 'start' },
+      eigen: { task: 'aula', text: 'Natuurlijk! Neem ook een waterfles mee, die vul je gratis bij het watertappunt naast de ingang.', back: 'start' },
+    },
+  },
+  {
+    id: 'lisa', name: 'Lisa', role: 'coach', py: A.balconyY,
+    pos: [9.4, -28.8], face: 2.6,
+    look: { skin: '#f0c9a8', hair: '#c9a24a', hairStyle: 'long', shirt: '#5aa04a', pants: '#2b2f3a', height: 1.7 },
+    dialog: {
+      start: { text: 'Hoi, ik ben Lisa, coach. Welkom op Agora! Hier zit je niet in een klas met vaste lessen zoals je misschien gewend bent. Wil je weten hoe het werkt?', choices: [
+        ['Hoe leer je hier zonder klassen?', 'leren'],
+        ['Wat doet een coach?', 'coach'],
+        ['Waarom staan hier zulke rare bureaus?', 'bureaus'],
+        ['Wat is dat beeld met vleugels?', 'beeld'],
+        ['Doei!', 'end'],
+      ] },
+      leren: { task: 'coach', text: 'Je werkt aan challenges: onderzoeken en projecten over iets wat jou boeit, gekoppeld aan je leerdoelen. Je kiest je werkplek op het leerplein, alleen of samen met anderen.', back: 'start' },
+      coach: { task: 'coach', text: 'Ik help je je doelen te kiezen en houd bij hoe het gaat. Je begint de dag bij je coachgroep en we praten regelmatig over je voortgang. Loop je vast, dan zoeken we samen een oplossing.', back: 'start' },
+      bureaus: { text: 'Die hebben leerlingen zelf ontworpen! Je mag je eigen werkplek maken: van een autovoorkant tot een bureau op stapels boeken. Kijk maar eens onder de glazen verdieping links.', back: 'start' },
+      beeld: { text: 'Dat is een kopie van de Nike van Samothrace, een beroemd Grieks beeld van de godin van de overwinning. Wil je er meer over weten? Dat kan zomaar je volgende challenge worden.', back: 'start' },
     },
   },
   {
@@ -64,18 +102,21 @@ const PEOPLE = [
       ] },
       wat: { task: 'mentor', text: 'Ik ben je eerste aanspreekpunt. Ik houd je cijfers en hoe het met je gaat in de gaten, geef mentorlessen en heb contact met je ouders. Loop je ergens tegenaan, dan kom je bij mij.', back: 'start' },
       zorg: { task: 'mentor', text: 'Goed dat je het zegt. Je kunt me altijd een bericht sturen of na de les even blijven. Praat je liever met iemand anders, dan kan dat bij de vertrouwenspersoon of de zorgcoördinator.', back: 'start' },
-      rooster: { text: 'Je rooster staat in de app. Check het elke ochtend: soms valt een uur uit of verandert een lokaal. Heb je een tussenuur, dan kun je in de aula of op de stiltewerkplek zitten.', back: 'start' },
+      rooster: { text: 'Je rooster staat in de app. Check het elke ochtend: soms valt een uur uit of verandert een lokaal. Heb je een tussenuur, dan kun je op het leerplein aan je challenge werken.', back: 'start' },
       mee: { text: 'Een etui, een schrift, je laptop als je die hebt en je lunch. Je boeken krijg je in de eerste week.', back: 'start' },
     },
   },
 ];
 
-// Walkable areas (x0, x1, z0, z1) and blocked areas inside them.
+// Walkable areas [x0, x1, z0, z1, floor height or (x, z) => height] and
+// blocked areas [x0, x1, z0, z1, maxFloor, minFloor] inside them.
 const WALK = [
   [-12, 18, -12.6, 8],          // square in front of the school
   [6.25, 7.55, -15.8, -12.4],   // through the revolving door
   [2.2, 17.0, -23.6, -15.5],    // lobby
   [-9.0, 2.6, -18.9, -17.1],    // classroom corridor (ground floor of the wing)
+  ...AGORA_WALK,
+  ...ENV_WALK,
 ];
 const BLOCK = [
   [9.9, 13.1, -20.1, -18.9],    // reception desk
@@ -83,6 +124,9 @@ const BLOCK = [
   [2.9, 3.35, -8.25, -7.75],    // lamp post
   [3.6, 4.3, -6.3, -5.7],       // flagpole
   [13.6, 16.6, -22.6, -21.6],   // benches
+  [7.0, 7.4, -23.6, -22.8],     // plant by the atrium doorway
+  ...AGORA_BLOCK,
+  ...ENV_BLOCK,
 ];
 
 const css = `
@@ -130,9 +174,17 @@ function sign(parent, lines, w, h, x, y, z, ry = 0, opts) {
   m.position.set(x, y, z); m.rotation.y = ry; parent.add(m); return m;
 }
 
-function buildInterior(scene) {
+function buildInterior(scene, world) {
   const g = new THREE.Group(); scene.add(g);
   const wall = std('#e9e3d6', 0.9), floor = std('#b9b2a5', 0.45), ceil = std('#f1eee8', 0.9);
+
+  // lobby back wall with a doorway into the aula
+  if (world.lobbyBackWall) world.lobbyBackWall.visible = false;
+  addBox(g, 1.9, 4.2, 0.12, wall, 2.45, 2.1, -24.0);
+  addBox(g, 11.1, 4.2, 0.12, wall, 11.95, 2.1, -24.0);
+  addBox(g, 3.0, 1.6, 0.12, wall, 4.9, 3.4, -24.0);
+  sign(g, ['Leerplein · Kantine ↑'], 2.4, 0.42, 4.9, 2.9, -23.92, 0, { w: 640, h: 112, bg: '#a85a4a', size: 60 });
+  buildAgora(g, sign);
 
   // lobby side walls; the west wall has an opening into the corridor
   addBox(g, 0.2, 4.1, 2.2, wall, 1.75, 2.05, -15.9);
@@ -155,7 +207,7 @@ function buildInterior(scene) {
   for (const x of [14.3, 15.9]) {
     addBox(g, 1.4, 0.45, 0.55, std('#f0a63a', 0.7), x, 0.23, -22.1);
   }
-  for (const [x, z] of [[16.6, -16.2], [2.8, -23.0], [16.6, -23.0]]) {
+  for (const [x, z] of [[16.6, -16.2], [7.2, -23.2], [16.6, -23.0]]) {
     addBox(g, 0.5, 0.5, 0.5, std('#e8e4dc', 0.6), x, 0.25, z);
     for (let i = 0; i < 7; i++) {
       const leaf = new THREE.Mesh(new THREE.IcosahedronGeometry(0.3 + Math.random() * 0.15, 0), std('#4f7a45', 0.9));
@@ -242,7 +294,7 @@ function makePerson(look) {
 // ---------------------------------------------------------------------------
 export function startWalk({ scene, camera, renderer, onFrame, world, onExit }) {
   const style = document.createElement('style'); style.textContent = css; document.head.appendChild(style);
-  buildInterior(scene);
+  buildInterior(scene, world);
 
   const done = new Set();
   const hud = document.createElement('div'); hud.className = 'walk-hud';
@@ -264,26 +316,36 @@ export function startWalk({ scene, camera, renderer, onFrame, world, onExit }) {
   // people
   const npcs = PEOPLE.map(def => {
     const obj = makePerson(def.look);
-    obj.position.set(def.pos[0], 0, def.pos[1]); obj.rotation.y = def.face; scene.add(obj);
+    obj.position.set(def.pos[0], def.py || 0, def.pos[1]); obj.rotation.y = def.face; scene.add(obj);
     const tag = document.createElement('div'); tag.className = 'walk-tag'; tag.innerHTML = `${def.name}<small>${def.role}</small>`; tag.style.display = 'none'; document.body.appendChild(tag);
     return { def, obj, tag, baseYaw: def.face, phase: Math.random() * 6 };
   });
 
   // player state
-  const player = { x: 6.9, z: -6.5, yaw: 0, pitch: 0.05 };
+  const player = { x: 6.9, y: 0, z: -6.5, yaw: 0, pitch: 0.05 };
   const keys = new Set();
   window.__player = player; // handy for debugging and automated checks
   let active = false, talking = null, near = null;
 
   const inRect = (x, z, r, pad = 0) => x > r[0] + pad && x < r[1] - pad && z > r[2] + pad && z < r[3] - pad;
-  function canStand(x, z) {
-    const R = 0.28;
-    if (!WALK.some(r => inRect(x, z, r) && inRect(x, z, r, 0) )) return false;
-    // keep a body radius inside walkable space: check the four offset points
-    for (const [dx, dz] of [[R, 0], [-R, 0], [0, R], [0, -R]]) if (!WALK.some(r => inRect(x + dx, z + dz, r))) return false;
-    if (BLOCK.some(r => x > r[0] - R && x < r[1] + R && z > r[2] - R && z < r[3] + R)) return false;
-    if (npcs.some(n => Math.hypot(n.obj.position.x - x, n.obj.position.z - z) < 0.6)) return false;
-    return true;
+  // Floors can be at different heights (balcony, stair). From the current
+  // height you can step onto floors within STEP; the highest such floor wins.
+  const STEP = 0.6;
+  const floorOf = (r, x, z) => typeof r[4] === 'function' ? r[4](x, z) : (r[4] || 0);
+  function floorAt(x, z, cur) {
+    let best = null;
+    for (const r of WALK) if (inRect(x, z, r)) { const h = floorOf(r, x, z); if (Math.abs(h - cur) < STEP && (best === null || h > best)) best = h; }
+    return best;
+  }
+  // returns the floor height at (x, z) if the player can stand there, else null
+  function canStand(x, z, cur = player.y) {
+    const R = 0.28, h = floorAt(x, z, cur);
+    if (h === null) return null;
+    // keep a body radius inside walkable space at (about) the same height
+    for (const [dx, dz] of [[R, 0], [-R, 0], [0, R], [0, -R]]) if (floorAt(x + dx, z + dz, h) === null) return null;
+    if (BLOCK.some(r => h < (r[4] ?? 99) && h >= (r[5] ?? -1) && x > r[0] - R && x < r[1] + R && z > r[2] - R && z < r[3] + R)) return null;
+    if (npcs.some(n => Math.abs(n.obj.position.y - h) < 1 && Math.hypot(n.obj.position.x - x, n.obj.position.z - z) < 0.6)) return null;
+    return h;
   }
 
   // ---- dialog ----
@@ -382,27 +444,28 @@ export function startWalk({ scene, camera, renderer, onFrame, world, onExit }) {
       const mx = (fx * f + -fz * s), mz = (fz * f + fx * s), len = Math.hypot(mx, mz);
       if (len > 0) {
         const nx = player.x + (mx / len) * speed, nz = player.z + (mz / len) * speed;
-        if (canStand(nx, nz)) { player.x = nx; player.z = nz; }
-        else if (canStand(nx, player.z)) player.x = nx;
-        else if (canStand(player.x, nz)) player.z = nz;
+        let h;
+        if ((h = canStand(nx, nz)) !== null) { player.x = nx; player.z = nz; player.y = h; }
+        else if ((h = canStand(nx, player.z)) !== null) { player.x = nx; player.y = h; }
+        else if ((h = canStand(player.x, nz)) !== null) { player.z = nz; player.y = h; }
       }
     }
     const moving = !talking && ['w', 's', 'a', 'd', 'arrowup', 'arrowdown'].some(k => keys.has(k));
-    camera.position.set(player.x, 1.6 + (moving ? Math.sin(performance.now() / 140) * 0.025 : 0), player.z);
+    camera.position.set(player.x, player.y + 1.6 + (moving ? Math.sin(performance.now() / 140) * 0.025 : 0), player.z);
     camera.rotation.set(player.pitch, player.yaw, 0);
 
     // who is close enough to talk to?
     near = null; let best = 2.6;
-    for (const n of npcs) { const d = Math.hypot(n.obj.position.x - player.x, n.obj.position.z - player.z); if (d < best) { best = d; near = n; } }
+    for (const n of npcs) { if (Math.abs(n.obj.position.y - player.y) > 1) continue; const d = Math.hypot(n.obj.position.x - player.x, n.obj.position.z - player.z); if (d < best) { best = d; near = n; } }
     if (!talking) {
       prompt.style.display = near ? '' : 'none';
       if (near) prompt.textContent = `💬 Druk op E (of tik hier) om met ${near.def.name} te praten`;
     }
     const w = canvas.clientWidth, h = canvas.clientHeight;
     for (const n of npcs) {
-      v.set(n.obj.position.x, n.obj.userData.hitHeight + 0.3, n.obj.position.z).project(camera);
+      v.set(n.obj.position.x, n.obj.position.y + n.obj.userData.hitHeight + 0.3, n.obj.position.z).project(camera);
       const d = Math.hypot(n.obj.position.x - player.x, n.obj.position.z - player.z);
-      const vis = v.z < 1 && Math.abs(v.x) < 1 && Math.abs(v.y) < 1 && d < 14;
+      const vis = !talking && v.z < 1 && Math.abs(v.x) < 1 && Math.abs(v.y) < 1 && d < 12 && Math.abs(n.obj.position.y - player.y) < 3;
       n.tag.style.display = vis ? '' : 'none';
       if (vis) { n.tag.style.left = ((v.x + 1) / 2) * w + 'px'; n.tag.style.top = ((1 - v.y) / 2) * h + 'px'; }
     }
@@ -417,7 +480,7 @@ export function startWalk({ scene, camera, renderer, onFrame, world, onExit }) {
       camera.updateProjectionMatrix = THREE.PerspectiveCamera.prototype.updateProjectionMatrix;
       camera.fov = 70; camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
       camera.rotation.order = 'YXZ';
-      Object.assign(player, { x: 6.9, z: -6.5, yaw: 0, pitch: 0.05 });
+      Object.assign(player, { x: 6.9, y: 0, z: -6.5, yaw: 0, pitch: 0.05 });
     },
   };
 }

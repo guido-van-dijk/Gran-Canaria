@@ -24,6 +24,16 @@ const STOPS = [
     pos: [-4.5, 5, -5], look: [-4.5, 7, -15], marker: [-4.5, 10.7, -14.5],
   },
   {
+    title: 'Het leerplein',
+    text: 'Achter de receptie ligt het leerplein: een groot open atrium zonder klaslokalen. Je werkt aan challenges op je eigen (soms zelfgebouwde!) werkplek, overlegt in de kurken kubus, klimt op de klimwand en luncht bij de gele foodtruck. Vanaf het gele balkon heb je het beste uitzicht.',
+    pos: [6.5, 5.7, -26.0], look: [15, 2.5, -36], marker: null,
+  },
+  {
+    title: 'De fietsenstalling',
+    text: 'Kom je op de fiets? Zet hem in de fietsenstalling links van de ingang, en altijd op slot. Niet op het plein voor de deur: daar moet iedereen er makkelijk langs kunnen.',
+    pos: [-1, 2.2, 6], look: [-7, 1.0, -2], marker: [-7, 3.0, -2],
+  },
+  {
     title: 'Mentor en hulp',
     text: 'Op de begane grond vind je je mentor en de zorgcoördinator. Heb je vragen of zit je ergens mee? Loop gerust binnen of stuur je mentor een bericht.',
     pos: [-2, 1.7, -6], look: [-2.5, 2.2, -15], marker: [-2.0, 2.6, -14.5],
