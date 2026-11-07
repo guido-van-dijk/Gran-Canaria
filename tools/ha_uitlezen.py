@@ -16,7 +16,9 @@ import os
 import ssl
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 TIMEOUT = 15
@@ -83,6 +85,64 @@ class HomeAssistant:
 
     def services(self) -> list[dict]:
         return self.get("services")
+
+    def historie(self, entity_id: str, start: datetime, eind: datetime, attributen: bool = False) -> list[dict]:
+        vraag = {"filter_entity_id": entity_id, "end_time": eind.isoformat()}
+        if not attributen:
+            vraag["minimal_response"] = ""
+            vraag["no_attributes"] = ""
+        pad = f"history/period/{start.isoformat()}?{urllib.parse.urlencode(vraag)}"
+        reeksen = self.get(pad)
+        return reeksen[0] if reeksen else []
+
+    def logboek(self, start: datetime, eind: datetime, entity_id: str | None = None) -> list[dict]:
+        vraag = {"end_time": eind.isoformat()}
+        if entity_id:
+            vraag["entity"] = entity_id
+        return self.get(f"logbook/period/{start.isoformat()}?{urllib.parse.urlencode(vraag)}")
+
+
+def lees_tijd(waarde: str, naief_is_lokaal: bool = False) -> datetime:
+    """Parse een ISO-tijd naar een tijdzone-bewuste datetime.
+
+    Home Assistant levert altijd een zone mee. Een tijd zonder zone komt van de
+    gebruiker (--vanaf/--tot) en bedoelt lokale tijd, niet UTC.
+    """
+    try:
+        gelezen = datetime.fromisoformat(waarde.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise HAError(f'Onleesbare tijd: "{waarde}". Gebruik bv. "2026-11-06 18:00".') from exc
+    if gelezen.tzinfo:
+        return gelezen
+    return gelezen.astimezone() if naief_is_lokaal else gelezen.replace(tzinfo=timezone.utc)
+
+
+def bepaal_periode(args) -> tuple[datetime, datetime]:
+    """Leid begin en eind van de gevraagde periode af uit --vanaf/--tot/--uren."""
+    nu = datetime.now(timezone.utc)
+    eind = lees_tijd(args.tot.replace(" ", "T"), naief_is_lokaal=True) if args.tot else nu
+    if args.vanaf:
+        start = lees_tijd(args.vanaf.replace(" ", "T"), naief_is_lokaal=True)
+    else:
+        start = eind - timedelta(hours=args.uren)
+    if start >= eind:
+        raise HAError("De begintijd ligt niet voor de eindtijd.")
+    return start, eind
+
+
+def duur(seconden: float) -> str:
+    """Toon een tijdsduur compact: 45s, 12m, 3u14m."""
+    seconden = int(seconden)
+    if seconden < 60:
+        return f"{seconden}s"
+    if seconden < 3600:
+        return f"{seconden // 60}m"
+    uren, rest = divmod(seconden, 3600)
+    return f"{uren}u{rest // 60:02d}m"
+
+
+def lokale_tijd(moment: datetime) -> str:
+    return moment.astimezone().strftime("%d-%m %H:%M:%S")
 
 
 def domein(entity_id: str) -> str:
@@ -198,6 +258,63 @@ def toon_services(ha: HomeAssistant, als_json: bool) -> None:
     print(tabel(rijen, ["domein", "services (eerste 6)"]))
 
 
+def toon_historie(ha: HomeAssistant, args) -> None:
+    start, eind = bepaal_periode(args)
+    punten = ha.historie(args.entity_id, start, eind, attributen=args.attributen)
+    if args.json:
+        print(json.dumps(punten, indent=2, ensure_ascii=False))
+        return
+    if not punten:
+        print(
+            f"Geen historie voor {args.entity_id} tussen {lokale_tijd(start)} en {lokale_tijd(eind)}.\n"
+            "Bestaat de entiteit, en bewaart de recorder deze periode nog?"
+        )
+        return
+
+    print(f"{args.entity_id}   {lokale_tijd(start)} → {lokale_tijd(eind)} (lokale tijd)\n")
+    rijen = []
+    for index, punt in enumerate(punten):
+        begon = lees_tijd(punt.get("last_changed") or punt["last_updated"])
+        volgend = punten[index + 1] if index + 1 < len(punten) else None
+        tot = lees_tijd(volgend.get("last_changed") or volgend["last_updated"]) if volgend else eind
+        eenheid_punt = punt.get("attributes", {}).get("unit_of_measurement", "")
+        rijen.append([
+            lokale_tijd(begon),
+            kort(f"{punt['state']} {eenheid_punt}".strip(), 28),
+            duur((tot - begon).total_seconds()),
+        ])
+    print(tabel(rijen, ["vanaf", "waarde", "duur"]))
+
+    print(f"\n{len(punten)} toestandswijzigingen.")
+    niet_beschikbaar = [p for p in punten if p["state"] in ("unavailable", "unknown")]
+    if niet_beschikbaar:
+        print(f"Waarvan {len(niet_beschikbaar)}x unavailable/unknown — mogelijk een haperende verbinding of integratie.")
+
+
+def toon_logboek(ha: HomeAssistant, args) -> None:
+    start, eind = bepaal_periode(args)
+    regels = ha.logboek(start, eind, args.entiteit)
+    if args.json:
+        print(json.dumps(regels, indent=2, ensure_ascii=False))
+        return
+    if not regels:
+        print(f"Geen logboekregels tussen {lokale_tijd(start)} en {lokale_tijd(eind)}.")
+        return
+
+    print(f"Logboek {lokale_tijd(start)} → {lokale_tijd(eind)} (lokale tijd)\n")
+    rijen = []
+    for regel in regels:
+        tijdstip = regel.get("when")
+        rijen.append([
+            lokale_tijd(lees_tijd(tijdstip)) if tijdstip else "?",
+            kort(regel.get("name", ""), 26),
+            kort(regel.get("message") or regel.get("state", ""), 30),
+            kort(regel.get("entity_id", ""), 34),
+        ])
+    print(tabel(rijen, ["tijd", "naam", "wat", "entity_id"]))
+    print(f"\n{len(regels)} regels.")
+
+
 def bouw_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Lees een Home Assistant instantie uit via de REST API.",
@@ -208,19 +325,38 @@ def bouw_parser() -> argparse.ArgumentParser:
     parser.add_argument("--geen-tls-check", action="store_true", help="TLS-certificaat niet valideren (zelfondertekend certificaat)")
     parser.add_argument("--json", action="store_true", help="ruwe JSON in plaats van een tabel")
 
-    sub = parser.add_subparsers(dest="commando")
-    sub.add_parser("overzicht", help="versie, aantallen per domein en problemen (standaard)")
+    gedeeld = argparse.ArgumentParser(add_help=False)
+    gedeeld.add_argument(
+        "--json", action="store_true", default=argparse.SUPPRESS,
+        help="ruwe JSON in plaats van een tabel",
+    )
 
-    p_states = sub.add_parser("states", help="entiteiten en hun huidige waarde")
+    sub = parser.add_subparsers(dest="commando", parser_class=argparse.ArgumentParser)
+    sub.add_parser("overzicht", parents=[gedeeld], help="versie, aantallen per domein en problemen (standaard)")
+
+    p_states = sub.add_parser("states", parents=[gedeeld], help="entiteiten en hun huidige waarde")
     p_states.add_argument("--domein", action="append", help="beperk tot dit domein; meermaals te gebruiken")
     p_states.add_argument("--zoek", help="filter op entity_id of naam")
     p_states.add_argument("--problemen", action="store_true", help="alleen unavailable/unknown")
 
-    p_ent = sub.add_parser("entiteit", help="details van één entiteit")
+    p_ent = sub.add_parser("entiteit", parents=[gedeeld], help="details van één entiteit")
     p_ent.add_argument("entity_id")
 
-    sub.add_parser("config", help="configuratie van de instantie")
-    sub.add_parser("services", help="beschikbare services per domein")
+    p_hist = sub.add_parser("historie", parents=[gedeeld], help="toestandswijzigingen van één entiteit over een periode")
+    p_hist.add_argument("entity_id")
+    p_hist.add_argument("--uren", type=float, default=24, help="aantal uren terug (standaard 24)")
+    p_hist.add_argument("--vanaf", help='begintijd, bv. "2026-11-06 18:00"; overstemt --uren')
+    p_hist.add_argument("--tot", help='eindtijd, bv. "2026-11-07 07:00" (standaard nu)')
+    p_hist.add_argument("--attributen", action="store_true", help="ook attributen opvragen (meer data)")
+
+    p_log = sub.add_parser("logboek", parents=[gedeeld], help="logboekregels over een periode")
+    p_log.add_argument("--entiteit", help="beperk tot deze entity_id")
+    p_log.add_argument("--uren", type=float, default=24, help="aantal uren terug (standaard 24)")
+    p_log.add_argument("--vanaf", help='begintijd, bv. "2026-11-06 18:00"; overstemt --uren')
+    p_log.add_argument("--tot", help='eindtijd, bv. "2026-11-07 07:00" (standaard nu)')
+
+    sub.add_parser("config", parents=[gedeeld], help="configuratie van de instantie")
+    sub.add_parser("services", parents=[gedeeld], help="beschikbare services per domein")
     return parser
 
 
@@ -247,6 +383,10 @@ def main(argv: list[str]) -> int:
             toon_entiteit(ha, args.entity_id, args.json)
         elif args.commando == "config":
             print(json.dumps(ha.config(), indent=2, ensure_ascii=False))
+        elif args.commando == "historie":
+            toon_historie(ha, args)
+        elif args.commando == "logboek":
+            toon_logboek(ha, args)
         elif args.commando == "services":
             toon_services(ha, args.json)
     except HAError as exc:

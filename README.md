@@ -33,10 +33,37 @@ python3 tools/ha_uitlezen.py config
 python3 tools/ha_uitlezen.py services
 ```
 
-Elke subopdracht accepteert `--json` voor ruwe JSON, handig om door te pipen:
+### Historie: uitzoeken waarom iets misging
+
+Voor een vraag over het verleden ("waarom laadde de auto niet?") is de huidige
+stand niet genoeg. Twee subopdrachten lezen de recorder uit:
+
+```bash
+# toestandswijzigingen van één entiteit, met de duur van elke stand
+python3 tools/ha_uitlezen.py historie sensor.laadpunt_vermogen --uren 24
+python3 tools/ha_uitlezen.py historie sensor.laadpunt_status \
+    --vanaf "2026-11-06 18:00" --tot "2026-11-07 07:00"
+
+# logboek over dezelfde periode, eventueel op één entiteit
+python3 tools/ha_uitlezen.py logboek --vanaf "2026-11-06 18:00"
+python3 tools/ha_uitlezen.py logboek --entiteit sensor.laadpunt_status --uren 12
+```
+
+`--vanaf` en `--tot` zonder tijdzone zijn **lokale** tijd; de uitvoer staat ook
+in lokale tijd. De historie markeert hoeveel standen `unavailable`/`unknown`
+waren — meestal de eerste aanwijzing bij een afgebroken laadsessie.
+
+Hoe ver terug je kunt kijken hangt af van je recorder-instelling
+(standaard 10 dagen).
+
+### JSON
+
+Elke subopdracht accepteert `--json` voor ruwe JSON, vóór of achter de
+subopdracht:
 
 ```bash
 python3 tools/ha_uitlezen.py states --domein sensor --json | jq '.[].entity_id'
+python3 tools/ha_uitlezen.py --json historie sensor.laadpunt_vermogen --uren 6
 ```
 
 Gebruik `--geen-tls-check` alleen bij een zelfondertekend certificaat op je eigen netwerk.
@@ -46,7 +73,8 @@ Gebruik `--geen-tls-check` alleen bij een zelfondertekend certificaat op je eige
 - **Niets schakelen.** Het script doet uitsluitend `GET`-verzoeken.
 - **Geen areas/devices.** Die staan niet in de REST API; daarvoor is de
   WebSocket API nodig.
-- **Geen historie.** `/api/history` is bewust niet ontsloten; voeg toe als je het nodig hebt.
+- **Geen automatiseringen uitlezen.** Welke automatisering een laadsessie
+  blokkeerde zie je hiermee niet; dat staat in de automatiseringen zelf.
 
 ### Bereikbaarheid
 

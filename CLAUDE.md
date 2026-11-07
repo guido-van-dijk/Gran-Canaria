@@ -58,9 +58,10 @@ python3 -m py_compile tools/ha_uitlezen.py   # syntaxcontrole
 ```
 
 Handmatig testen zonder echte instantie: draai een mock-HTTP-server die
-`/api/`, `/api/config`, `/api/states`, `/api/states/<id>` en `/api/services`
-teruggeeft, en wijs `--url` daarheen. Zet `NO_PROXY` voor het loopback-adres
-als er een HTTP-proxy in de omgeving staat.
+`/api/`, `/api/config`, `/api/states`, `/api/states/<id>`, `/api/services`,
+`/api/history/period/<ts>` en `/api/logbook/period/<ts>` teruggeeft, en wijs
+`--url` daarheen. Zet `NO_PROXY` voor het loopback-adres als er een HTTP-proxy
+in de omgeving staat, en `TZ` om de tijdzone-omrekening te controleren.
 
 ## Conventions
 
@@ -74,6 +75,12 @@ als er een HTTP-proxy in de omgeving staat.
   naar stderr en geeft exit 1.
 - **Alleen lezen:** het script doet uitsluitend `GET`. Schakelen of services
   aanroepen is bewust geen onderdeel; voeg dat niet toe zonder expliciete vraag.
+- **Tijdzones:** Home Assistant levert tijden in UTC; invoer van de gebruiker
+  (`--vanaf`/`--tot`) zonder zone is lokale tijd. `lees_tijd(..., naief_is_lokaal=)`
+  legt dat verschil vast — ga niet terug naar één vaste aanname.
+- **Globale vlaggen:** `--json` zit op een `parents=[gedeeld]`-parser met
+  `default=argparse.SUPPRESS`, zodat de vlag vóór én achter de subopdracht werkt.
+  Zonder SUPPRESS overschrijft de subparser de globale waarde.
 - **Geheimen:** tokens komen uit `.env`, omgevingsvariabelen of vlaggen en staan
   nooit in de repository.
 
